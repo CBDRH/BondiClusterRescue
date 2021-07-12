@@ -1,0 +1,14 @@
+base
+covoid
+tidyverse
+ggplot2
+tibble
+tidyr
+readr
+purrr
+dplyr
+stringr
+forcats
+COVID19
+janitor
+lubridate
