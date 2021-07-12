@@ -258,11 +258,11 @@ dfInterventions <- rbind(intC50a, intC50b, intC50c, intC50d, intC50e,
                         type = c(rep('Social contact', xLen*5), rep('Transmission probability', xLen*5)),
                         scenario = factor(rep(rep(1:5, each = xLen), 2), 
                                           levels = 1:5, 
-                                          labels = c('Lift restrictions', 
-                                                     'Relax restrictions but limit transmission probability', 
+                                          labels = c('Lift restrictions  on social contacts', 
+                                                     'Relax restrictions on social contacts\nbut limit transmission probability', 
                                                      'Continue at current level', 
-                                                     'Tighten restrictions',
-                                                     'Tighten restrictions and limit\ntransmission probability'))
+                                                     'Tighten restrictions on social contacts',
+                                                     'Tighten restrictions  on social contacts\nand limit transmission probability'))
                     )
 
 # Illustrate the interventions
@@ -344,11 +344,11 @@ dfModel2 <- purrr::map_df(simulation_results2, ~tibble(date = .$epi$t + as.Date(
                                                      predInc = .$epi$incidence),
                          .id = "source") %>% 
     mutate(scenario = factor(rep(1:5, each = xLen), levels = 1:5, 
-                                          labels = c('Lift restrictions', 
-                                                     'Relax restrictions but limit transmission probability', 
+                                          labels = c('Lift restrictions on social contacts', 
+                                                     'Relax restrictions on social contacts\nbut limit transmission probability', 
                                                      'Continue at current level', 
-                                                     'Tighten restrictions',
-                                                     'Tighten restrictions and limit\ntransmission probability'))
+                                                     'Tighten restrictions on social contacts',
+                                                     'Tighten restrictions on social contacts\nand limit transmission probability'))
         )
 
 # Visualise the projections
@@ -394,11 +394,11 @@ dfInterventions2 <- rbind(intC30a, intC30b, intC30c, intC30d, intC30e,
         type = c(rep('Social contact', xLen*5), rep('Transmission probability', xLen*5)),
         scenario = factor(rep(rep(1:5, each = xLen), 2), 
                           levels = 1:5, 
-                          labels = c('Lift restrictions', 
-                                     'Relax restrictions but limit transmission probability', 
+                          labels = c('Lift restrictions on social contacts', 
+                                     'Relax restrictions on social contacts\nbut limit transmission probability', 
                                      'Continue at current level', 
-                                     'Tighten restrictions',
-                                     'Tighten restrictions and limit transmission probability'))
+                                     'Tighten restrictions on social contacts',
+                                     'Tighten restrictions on social contacts\nand limit transmission probability'))
     )
 
 # Illustrate the interventions
@@ -480,11 +480,11 @@ dfModel3 <- purrr::map_df(simulation_results3, ~tibble(date = .$epi$t + as.Date(
                                                        predInc = .$epi$incidence),
                           .id = "source") %>% 
     mutate(scenario = factor(rep(1:5, each = xLen), levels = 1:5, 
-                             labels = c('Lift restrictions', 
-                                        'Relax restrictions but limit transmission probability', 
+                             labels = c('Lift restrictions on social contacts', 
+                                        'Relax restrictions on social contacts\nbut limit transmission probability', 
                                         'Continue at current level', 
-                                        'Tighten restrictions',
-                                        'Tighten restrictions and limit transmission probability'))
+                                        'Tighten restrictions on social contacts',
+                                        'Tighten restrictions on social contacts\nand limit transmission probability'))
     )
 
 # Visualise the projections
