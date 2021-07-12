@@ -9,7 +9,7 @@ author:
 - L. Jorm^[Centre for Big Data Research in Health, UNSW Sydney]
 date: "Updated `r format(lubridate::today(), '%a %d %b %Y')`"
 output: html_document
-abstract: The ongoing COVID-19 Delta variant outbreak in Sydney has resulted in 514 active cases, with 63 individuals in hospital and 18 individuals in ICU, as of 12 July 2021. Current restrictions are in place until Friday 16 July, pending further advise from NSW Health. Here we model observed cases and project our model until 1st September under five potential scenarios for non-pharmaceutical interventions beyond the 12 July end date for current restrictions. Our results suggest that reducing daily incidence to a manageable level before September will require a contined lockdown throughout August during which the net effect of all restrictions is stronger than the level observed in early July. Lifting restrictions on social contacts at the end of the current lockdown period will result in a exponential rise in cases and ultimately prolong the outbreak. Maintaining restrictions at the level observed in early July is unlikely to get the outbreak under control before the start of September.
+abstract: The ongoing COVID-19 Delta variant outbreak in Sydney has resulted in 514 active cases, with 63 individuals in hospital and 18 individuals in ICU, as of 12 July 2021. Current restrictions are in place until Friday 16 July, pending further advice from NSW Health. Here we model observed cases and project our model until 1st September under five potential scenarios for non-pharmaceutical interventions beyond the 12 July end date for current restrictions. Our results suggest that reducing daily incidence to a manageable level before September will require a contined lockdown throughout August during which the net effect of all restrictions is stronger than the level observed in early July. Lifting restrictions on social contacts at the end of the current lockdown period will result in a exponential rise in cases and ultimately prolong the outbreak. Maintaining restrictions at the level observed in early July is unlikely to get the outbreak under control before the start of September.
 ---
 
 ![](UNSW_2017_Big_Data_landscape.png)
@@ -17,7 +17,7 @@ abstract: The ongoing COVID-19 Delta variant outbreak in Sydney has resulted in 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, error = FALSE, message = FALSE, cache = FALSE)
 
-# Install COVOID if neccesary
+# Install COVOID if necessary
 # devtools::install_github('CBDRH/covoid', ref = 'master')
 
 # Libraries
@@ -63,7 +63,7 @@ state0 <- seir_c_state0(S = S, E = E, I = I, R = R)
 #####################
 
 # Contact tracing in earnest from June 16 
-dateT <- '2021-06-16' # Date that limo chauffer was identified and contact tracing in earnest
+dateT <- '2021-06-16' # Date that limo chauffeur was identified and contact tracing in earnest
 dayT <- as.numeric(as.Date(dateT) - as.Date(DAY1))
 intT30 <- data.frame(time = 1:NDAYS,  reduce = c(rep(1, dayT), rep(0.7, NDAYS-dayT))) # 30% reduction
 intT40 <- data.frame(time = 1:NDAYS,  reduce = c(rep(1, dayT), rep(0.6, NDAYS-dayT))) # 40% reduction
@@ -85,7 +85,7 @@ class(intC30) <- class(intC40) <- class(intC50) <- class(intC60) <- c("data.fram
 
 
 ###########################
-### Calibrartion models ###
+### Calibration models ###
 ###########################
 
 # model and simulation (R0 = 6, 7, 8 | Intervention = 30%, 40%, 50%, 60%)
@@ -262,7 +262,7 @@ dfInterventions <- rbind(intC50a, intC50b, intC50c, intC50d, intC50e,
                                                      'Relax restrictions but limit transmission probability', 
                                                      'Continue at current level', 
                                                      'Tighten restrictions',
-                                                     'Tighten restrictions and limit transmission probability'))
+                                                     'Tighten restrictions and limit\ntransmission probability'))
                     )
 
 # Illustrate the interventions
@@ -283,7 +283,7 @@ class(intC50a) <- class(intC50b) <- class(intC50c) <- class(intC50d) <- class(in
 class(intT50a) <- class(intT50b) <- class(intT50c) <- class(intT50d) <- class(intT50e) <- c("data.frame", "intervention")
 
 
-# Define COVOID params based onthese interventions (Note R0 = 8)
+# Define COVOID params based on these interventions (Note R0 = 8)
 param850a <- seir_c_param(R0 = 8.0,
                         gamma = 1/4, 
                         sigma=1/7, 
@@ -339,7 +339,7 @@ for(i in 1:length(simulation_results2)){
 }
 
 
-# Compile the results as a dtaframe
+# Compile the results as a dataframe
 dfModel2 <- purrr::map_df(simulation_results2, ~tibble(date = .$epi$t + as.Date(DAY1) - 1,
                                                      predInc = .$epi$incidence),
                          .id = "source") %>% 
@@ -348,7 +348,7 @@ dfModel2 <- purrr::map_df(simulation_results2, ~tibble(date = .$epi$t + as.Date(
                                                      'Relax restrictions but limit transmission probability', 
                                                      'Continue at current level', 
                                                      'Tighten restrictions',
-                                                     'Tighten restrictions and limit transmission probability'))
+                                                     'Tighten restrictions and limit\ntransmission probability'))
         )
 
 # Visualise the projections
@@ -419,7 +419,7 @@ class(intC30a) <- class(intC30b) <- class(intC30c) <- class(intC30d) <- class(in
     class(intT30a) <- class(intT30b) <- class(intT30c) <- class(intT30d) <- class(intT30e) <- c("data.frame", "intervention")
 
 
-# Define COVOID params based onthese interventions (Note R0 = 8)
+# Define COVOID params based on these interventions (Note R0 = 8)
 param630a <- seir_c_param(R0 = 6.0,
                           gamma = 1/4, 
                           sigma=1/7, 
@@ -475,7 +475,7 @@ for(i in 1:length(simulation_results3)){
 }
 
 
-# Compile the results as a dtaframe
+# Compile the results as a dataframe
 dfModel3 <- purrr::map_df(simulation_results3, ~tibble(date = .$epi$t + as.Date(DAY1) - 1,
                                                        predInc = .$epi$incidence),
                           .id = "source") %>% 
@@ -525,15 +525,15 @@ baseFig
 
 We model the outbreak using an age-structured deterministic Susceptible-Exposed-Infected-Recovered (SEIR) model that accounts for dynamic non-pharmaceutical interventions (NPIs). This extended SEIR model has been implemented in our `COVOID` R package, described in detail at [cbdrh.github.io/covoidance](https://cbdrh.github.io/covoidance/). In brief, this model can incorporate two types of NPIs into a standard SEIR epidemic model:
 
-(i) interventions that target the average number of daily contacts between individuals from different age groups, which emulating restrictions on social activity such as stay-at home orders.
+(i) interventions that target the average number of daily contacts between individuals from different age groups, which emulates restrictions on social activity such as stay-at home orders.
 
 (ii) interventions that target the probability of transmission, emulating mask wearing, hand washing, contact tracing and case isolation. 
 
 ### Demographics
-We assumed a population of 4 million unvaccinated individuals with an age distribution reflecting that of the broader Australian population. Given the relatively low proportion of fully vaccinated individuals to date, and the relatively short time frame in question, the potential role of vaccination to mitigate the current outbreak is negligible. To be conservative, we model a population around ~80 the size of Sydney assuming the remaining ~20% are fully protected. 
+We assumed a population of 4 million unvaccinated individuals with an age distribution reflecting that of the broader Australian population. Given the relatively low proportion of fully vaccinated individuals to date, and the relatively short time frame in question, the potential role of vaccination to mitigate the current outbreak is negligible. To be conservative, we model a population around 80% the size of Sydney assuming the remaining  approximately 20% are fully protected. 
 
 ### Disease parameters
-We set the average duration of the incubation period to 4 days and the average duration of the infectious period to 7 days. Our calibration exercise below explored three values of R~0~: 6.0, 7.0 and 8.0. 
+We set the average duration of the incubation period to 4 days and the average duration of the infectious period to 7 days. Our calibration exercise below explored three values of R~0~: 6.0, 7.0 and 8.0. Note that R~0~ is the _base reproduction rate_, absent of any intervention or immunity. This should be distinguished from R~t~ (also known as R~eff~) which is the time-variant reproduction rate (or effective reproduction rate), which takes into account the effect of public health interventions and population immunity (either natural or due to vaccination).
 
 ### Timeline of the outbreak
 We assume the following key dates in the timeline of the current outbreak:
@@ -552,7 +552,7 @@ The R code to replicate this analysis is available on [GitHub](https://github.co
 
 # Calibration
 
-The Delta-variant R~0~ and the effectiveness of NPIs combine to give an effective reproduction rate R~eff~. Because the true value of the R~0~ and NPI effectiveness are unknown, we undertake a calibration exercise to find combinations of these parameters which fit the observed cases. Based on the timeline above, we used the `COVOID` SEIR model to estimate the epidemic curve across a range of values for R~0~ (4.0, 6.0, 8.0) and NPI effectiveness (30% to 70% reduction in contacts/transmission probability). The results of this calibration exercise are presented below.
+The Delta-variant R~0~ and the effectiveness of NPIs combine to give an effective reproduction rate R~eff~. Because the true value of the R~0~ and NPI effectiveness are unknown, we undertake a calibration exercise to find combinations of these parameters which fit the observed cases. Based on the timeline above, we used the `COVOID` SEIR model to estimate the epidemic curve across a range of values for R~0~ (4.0, 6.0, 8.0) and NPI effectiveness (30% to 70% reduction in contacts and/or transmission probability). The results of this calibration exercise are presented below.
 ```{r calibrationFig, fig.cap='Calibrating the SEIR model to locally transmitted cases in NSW since June 1', fig.height=4.0, fig.width=6.5, fig.align='center'}
 
 calibrationFig
@@ -563,15 +563,17 @@ _The points shows locally-transmitted cases of COVID-19 in NSW since June 1 2021
 
 Several combinations of R~0~ and NPI effectiveness provide a reasonable fit to the data. For our main analysis we choose values of R~0~ = 8.0 and NPI effectiveness = 50%. We also undertook an sensitivity analysis using the values of R~0~ = 6.0 and NPI effectiveness = 30%.
 
+This range of estimates of R~0~ is consistent with the [range of 5 to 8 estimated for the Delta variant by modellers at Imperial College London](https://www.bbc.com/news/health-57431420).
+
 
 # Intervention scenarios
 
 Our analysis assumes that the current level of restrictions remains in place until Friday 16 July. Thereafter, we projected the model under the following five scenarios.
 
-1. Lift all restrictions on social contacts, while restrictions targeting transmission probability remain as they are.
+1. Lift all restrictions on social contacts, with restrictions targeting transmission probability (mask wearing etc) remaining as they are.
 2. Relax restrictions on social contacts but tighten restrictions targeting transmission probability
 3. Continue with restrictions at the current level
-4. Tighten restrictions on social contacts, while restrictions targeting transmission probability remain as they are.
+4. Tighten restrictions on social contacts, with restrictions targeting transmission probability remaining as they are.
 5. Tighten restrictions on social contacts and also tighten restrictions targeting transmission probability.
 
 These five scenarios are summarised below.
@@ -586,19 +588,19 @@ Note that we assume the restrictions remain in place until September 1.
 # Model results
 
 The figure below shows the projected incidence based on R~0~ = 8.0 with intervention settings as described above
-```{r projectionsFig, fig.cap='Observed and projected COVID-19 incidence in NSW (1 June - 1 September 2021)', fig.height=4.0, fig.width=6.5, fig.align='center'}
+```{r projectionsFig, fig.cap='Observed and projected COVID-19 incidence in NSW (1 June - 1 September 2021)', fig.height=4.0, fig.width=6.5, fig.align='center', out.width="80%"}
 
 projectionsFig
 
 ```
 _R~0~ = 8.0 and baseline NPI effectiveness = 50%_
 
-The results suggest that completely lifting restrictions would result in an epidemic rise in cases. Continuing with restrictions at the level they were at in early July will not be sufficient to get the outbreak under control. To reduce daily incidence to a manageable level before September will require a lockdown throughout August where the net effect of all restrictions is stronger than the level observed in early July.
+The results suggest that completely lifting restrictions on social contact (that is, ending the "lockdown") would result in an epidemic rise in cases. Continuing with social contact restrictions at the level they were at in early July is unlikely to be sufficient to get the outbreak under control. To reduce daily incidence to a manageable level before September will require a lockdown throughout August where the net effect of all restrictions is stronger than the level observed in early July (that is, currrently).
 
 
 # Sensitivity analysis 
 
-In order to test the robustness of our conclusions to our subjective choice of R~0~ and NPI effectiveness, we repeat the analysis using the alternative specification of R~0~ = 6.0 and NPI effectiveness = 30%. We specify a similar set of five future intervention scenarios starting from the baseline of 30%.
+In order to test the robustness of our conclusions to our heuristic choice of R~0~ and NPI effectiveness, we repeat the analysis using the alternative specification of R~0~ = 6.0 and NPI effectiveness = 30%. We specify a similar set of five future intervention scenarios starting from the baseline of 30%.
 
 ```{r interventionsFig2, fig.cap='Sensitivity analysis: Five scenarios for NPI effectiveness from a baseline of 30% reduction', fig.height=4.0, fig.width=6.5, fig.align='center'}
 
@@ -608,7 +610,7 @@ interventionsFig2
 
 The figure below presents the projected case incidence based on this parameterisation. 
 
-```{r sensitivityFig, fig.cap='Sensitivity analysis: Observed and projected COVID-19 incidence in NSW (1 June - 1 September 2021)', fig.height=4.0, fig.width=6.5, fig.align='center'}
+```{r sensitivityFig, fig.cap='Sensitivity analysis: Observed and projected COVID-19 incidence in NSW (1 June - 1 September 2021)', fig.height=4.0, fig.width=6.5, fig.align='center', out.width="80%"}
 
 sensitivityFig
 
