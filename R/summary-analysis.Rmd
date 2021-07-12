@@ -1,17 +1,26 @@
 ---
-title: "Bondi Cluster Rescue"
-author: "Mark Hanly"
-date: "10/07/2021"
+title: "In-brief analysis"
+subtitle: "Modelling the current COVID-19 Delta-variant outbreak in Sydney" 
+author: 
+- M. Hanly^[Centre for Big Data Research in Health, UNSW Sydney]   
+- T. Churches^[South Western Sydney Clinical School, UNSW Sydney | Ingham Institute for Applied Medical Research]
+- O. Fitzgerald^[Centre for Big Data Research in Health, UNSW Sydney]
+- CR. MacIntyre^[Biosecurity Research Program, The Kirby Institute, UNSW Sydney]
+- L. Jorm^[Centre for Big Data Research in Health, UNSW Sydney]
+date: "Updated `r format(lubridate::today(), '%a %d %b %Y')`"
 output: html_document
+abstract: The ongoing COVID-19 Delta variant outbreak in Sydney has resulted in 514 active cases, with 63 individuals in hospital and 18 individuals in ICU, as of 12 July 2021. Current restrictions are in place until Friday 16 July, pending further advice from NSW Health. Here we model observed cases and project our model until 1st September under five potential scenarios for non-pharmaceutical interventions beyond the 12 July end date for current restrictions. Our results suggest that reducing daily incidence to a manageable level before September will require a contined lockdown throughout August during which the net effect of all restrictions is stronger than the level observed in early July. Lifting restrictions on social contacts at the end of the current lockdown period will result in a exponential rise in cases and ultimately prolong the outbreak. Maintaining restrictions at the level observed in early July is unlikely to get the outbreak under control before the start of September.
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, warning = FALSE, error = FALSE, message = FALSE)
+![](UNSW_2017_Big_Data_landscape.png)
 
-# Install COVOID if neccesary
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, error = FALSE, message = FALSE, cache = FALSE)
+
+# Install COVOID if necessary
 # devtools::install_github('CBDRH/covoid', ref = 'master')
 
-# ibraries
+# Libraries
 library(covoid)
 library(tidyverse)
 library(COVID19)
@@ -23,35 +32,26 @@ DAY1 <- '2021-06-01'
 TODAY <- as.Date('2021-07-10')
 NDAYS <- as.numeric(TODAY - as.Date(DAY1) + 1) 
 
-# Global variable
-DAY1 <- '2021-06-01'
-TODAY <- as.Date('2021-07-10')
-NDAYS <- as.numeric(TODAY - as.Date(DAY1) + 1) 
-
 # Read in NSW data (last three months data downloaded from https://www.covid19data.com.au/nsw)
 df <- read_csv(file = here::here('data/Last 3 months (true).csv')) %>% 
-    mutate(date = as.Date(paste0(Date, '/2021'), format = "%d/%m/%Y"),
-           clusInc = `Known local source` + `Unknown local source (community spread)` + `Under investigation`,
-           clusInc7 = zoo::rollmean(clusInc, k = 7, na.pad = TRUE, align = "center")) %>% 
-    select(-Date) %>% 
-    filter(date >= as.Date(DAY1))
-
-ggplot(data = df, 
-       aes(x = date, y = clusInc)) + 
-       geom_line()
-
+        mutate(date = as.Date(paste0(Date, '/2021'), format = "%d/%m/%Y"),
+               clusInc = `Known local source` + `Unknown local source (community spread)` + `Under investigation`,
+               clusInc7 = zoo::rollmean(clusInc, k = 7, na.pad = TRUE, align = "right")) %>% 
+        select(-Date) %>% 
+        filter(date >= as.Date(DAY1))
 
 # import and setup baseline states
 cm_oz <- import_contact_matrix("Australia","general")
 nJ <- ncol(cm_oz)
 dist_oz <- import_age_distribution("Australia")
+pop <- 4E6
 
 #################################
 ### Define initial conditions ###
 #################################
 
-S <- dist_oz*5e6
-E <- c(rep(0,6), 1, rep(0,9))
+S <- dist_oz*pop
+E <- c(rep(0,5), 1, rep(0,10))
 I <- rep(0,length(S))
 R <- rep(0,length(S))
 
@@ -63,49 +63,41 @@ state0 <- seir_c_state0(S = S, E = E, I = I, R = R)
 #####################
 
 # Contact tracing in earnest from June 16 
-dateT <- '2021-06-16' # Date that limo chauffer was identified and contact tracing in earnest
+dateT <- '2021-06-16' # Date that limo chauffeur was identified and contact tracing in earnest
 dayT <- as.numeric(as.Date(dateT) - as.Date(DAY1))
-intT20 <- data.frame(time = 1:NDAYS,  reduce = c(rep(1, dayT), rep(0.8, NDAYS-dayT))) # 20% reduction
 intT30 <- data.frame(time = 1:NDAYS,  reduce = c(rep(1, dayT), rep(0.7, NDAYS-dayT))) # 30% reduction
 intT40 <- data.frame(time = 1:NDAYS,  reduce = c(rep(1, dayT), rep(0.6, NDAYS-dayT))) # 40% reduction
 intT50 <- data.frame(time = 1:NDAYS,  reduce = c(rep(1, dayT), rep(0.5, NDAYS-dayT))) # 50% reduction
+intT60 <- data.frame(time = 1:NDAYS,  reduce = c(rep(1, dayT), rep(0.4, NDAYS-dayT))) # 60% reduction
 
-class(intT20) <- class(intT30) <- class(intT40) <- class(intT50) <- c("data.frame", "intervention")
+class(intT30) <- class(intT40) <- class(intT50) <- class(intT60) <- c("data.frame", "intervention")
 
 # Lockdown from June 25 (day 15)
 dateC <- '2021-06-25' # date that lockdown began
 dayC <- as.numeric(as.Date(dateC) - as.Date(DAY1))
-intC20 <- data.frame(time = 1:NDAYS,  reduce = c(rep(1, dayC), rep(0.8, NDAYS-dayC))) # 20% reduction
 intC30 <- data.frame(time = 1:NDAYS,  reduce = c(rep(1, dayC), rep(0.7, NDAYS-dayC))) # 30% reduction
 intC40 <- data.frame(time = 1:NDAYS,  reduce = c(rep(1, dayC), rep(0.6, NDAYS-dayC))) # 40% reduction
 intC50 <- data.frame(time = 1:NDAYS,  reduce = c(rep(1, dayC), rep(0.5, NDAYS-dayC))) # 50% reduction
+intC60 <- data.frame(time = 1:NDAYS,  reduce = c(rep(1, dayC), rep(0.4, NDAYS-dayC))) # 60% reduction
 
 # Have to define as appropriate class to work for COVOID
-class(intC20) <- class(intC30) <- class(intC40) <- class(intC50) <- c("data.frame", "intervention")
+class(intC30) <- class(intC40) <- class(intC50) <- class(intC60) <- c("data.frame", "intervention")
 
 
 ###########################
-### Calibrartion models ###
+### Calibration models ###
 ###########################
 
-# model and simulation (R0 = 6, 7, 8 | Intervention = 20%, 30%, 40%, 50%)
-param1a <- seir_c_param(R0 = 6.0,
+# model and simulation (R0 = 6, 7, 8 | Intervention = 30%, 40%, 50%, 60%)
+param1a <- seir_c_param(R0 = 4.0,
                       gamma = 1/4, 
                       sigma=1/7, 
                       cm=cm_oz,
                       dist=dist_oz,
-                      transmission_intervention = intT20,
-                      contact_intervention = intC20)
+                      transmission_intervention = intT30,
+                      contact_intervention = intC30)
 
-param1b <- seir_c_param(R0 = 6.0,
-                        gamma = 1/4, 
-                        sigma=1/7, 
-                        cm=cm_oz,
-                        dist=dist_oz,
-                        transmission_intervention = intT30,
-                        contact_intervention = intC30)
-
-param1c <- seir_c_param(R0 = 6.0,
+param1b <- seir_c_param(R0 = 4.0,
                         gamma = 1/4, 
                         sigma=1/7, 
                         cm=cm_oz,
@@ -113,7 +105,7 @@ param1c <- seir_c_param(R0 = 6.0,
                         transmission_intervention = intT40,
                         contact_intervention = intC40)
 
-param1d <- seir_c_param(R0 = 6.0,
+param1c <- seir_c_param(R0 = 4.0,
                         gamma = 1/4, 
                         sigma=1/7, 
                         cm=cm_oz,
@@ -121,15 +113,15 @@ param1d <- seir_c_param(R0 = 6.0,
                         transmission_intervention = intT50,
                         contact_intervention = intC50)
 
-param2a <- seir_c_param(R0 = 7.0,
+param1d <- seir_c_param(R0 = 4.0,
                         gamma = 1/4, 
                         sigma=1/7, 
                         cm=cm_oz,
                         dist=dist_oz,
-                        transmission_intervention = intT20,
-                        contact_intervention = intC20)
+                        transmission_intervention = intT60,
+                        contact_intervention = intC60)
 
-param2b <- seir_c_param(R0 = 7.0,
+param2a <- seir_c_param(R0 = 6.0,
                         gamma = 1/4, 
                         sigma=1/7, 
                         cm=cm_oz,
@@ -137,7 +129,7 @@ param2b <- seir_c_param(R0 = 7.0,
                         transmission_intervention = intT30,
                         contact_intervention = intC30)
 
-param2c <- seir_c_param(R0 = 7.0,
+param2b <- seir_c_param(R0 = 6.0,
                         gamma = 1/4, 
                         sigma=1/7, 
                         cm=cm_oz,
@@ -145,31 +137,31 @@ param2c <- seir_c_param(R0 = 7.0,
                         transmission_intervention = intT40,
                         contact_intervention = intC40)
 
-param2d <- seir_c_param(R0 = 7.0,
+param2c <- seir_c_param(R0 = 6.0,
                         gamma = 1/4, 
                         sigma=1/7, 
                         cm=cm_oz,
                         dist=dist_oz,
                         transmission_intervention = intT50,
                         contact_intervention = intC50)
+
+param2d <- seir_c_param(R0 = 6.0,
+                        gamma = 1/4, 
+                        sigma=1/7, 
+                        cm=cm_oz,
+                        dist=dist_oz,
+                        transmission_intervention = intT60,
+                        contact_intervention = intC60)
 
 param3a <- seir_c_param(R0 = 8.0,
                         gamma = 1/4, 
                         sigma=1/7, 
                         cm=cm_oz,
                         dist=dist_oz,
-                        transmission_intervention = intT20,
-                        contact_intervention = intC20)
-
-param3b <- seir_c_param(R0 = 8.0,
-                        gamma = 1/4, 
-                        sigma=1/7, 
-                        cm=cm_oz,
-                        dist=dist_oz,
                         transmission_intervention = intT30,
                         contact_intervention = intC30)
 
-param3c <- seir_c_param(R0 = 8.0,
+param3b <- seir_c_param(R0 = 8.0,
                         gamma = 1/4, 
                         sigma=1/7, 
                         cm=cm_oz,
@@ -177,13 +169,21 @@ param3c <- seir_c_param(R0 = 8.0,
                         transmission_intervention = intT40,
                         contact_intervention = intC40)
 
-param3d <- seir_c_param(R0 = 8.0,
+param3c <- seir_c_param(R0 = 8.0,
                         gamma = 1/4, 
                         sigma=1/7, 
                         cm=cm_oz,
                         dist=dist_oz,
                         transmission_intervention = intT50,
                         contact_intervention = intC50)
+
+param3d <- seir_c_param(R0 = 8.0,
+                        gamma = 1/4, 
+                        sigma=1/7, 
+                        cm=cm_oz,
+                        dist=dist_oz,
+                        transmission_intervention = intT60,
+                        contact_intervention = intC60)
 
 
 # Set up list structure to store simulation output
@@ -194,16 +194,15 @@ names(simulation_results) <- paste0(rep('param',12), rep(1:3, each = 4), rep(let
 for(i in 1:12){
  
     id <- names(simulation_results)[i]
-    simulation_results[[id]] <- simulate_seir_c(t = NDAYS, state_t0 = state0, param = eval(parse(text=id)))
-       
+    simulation_results[[id]] <- simulate_seir_c(t = NDAYS, state_t0 = state0, param = eval(parse(text=id)))   
 }
     
 # Compile the output as a data frame
 dfModel <- purrr::map_df(simulation_results, ~tibble(date = .$epi$t + as.Date(DAY1) - 1,
                                             predInc = .$epi$incidence),
                                         .id = "source") %>% 
-            mutate(r = factor(rep(1:3, each = 160), levels = 1:3, labels = c('6.0', '7.0', '8.0')),
-                   suppression = rep(rep(c('20%', '30%', '40%', '50%'), each = NDAYS), 3)
+            mutate(r = factor(rep(1:3, each = 160), levels = 1:3, labels = c('4.0', '6.0', '8.0')),
+                   suppression = rep(rep(c('30%', '40%', '50%', '60%'), each = NDAYS), 3)
             )
     
 # Baseline fig of existing cases    
@@ -212,15 +211,16 @@ pBase <- ggplot() +
             geom_point(data = df, aes(x = date, y = clusInc), color = 'red', size = 1, alpha = .6) 
 
 baseFig <- pBase +
-            scale_y_continuous("Daily incidence", limits = c(0,60)) +
-            scale_x_date('Date', date_breaks = '1 month', date_labels = '%d %b') 
+            scale_y_continuous("Daily incidence", limits = c(0,NA)) +
+            scale_x_date('Date', date_breaks = '1 month', date_labels = '%d %b') +
+            labs(caption = 'Data source: covid19data.com.au')
 
 # Plot the calibration
 calibrationFig <- pBase +
                     geom_line(data = dfModel, 
                               aes(x = date, y = predInc, color = suppression), size = 1) +
-                              scale_colour_manual('Restrictions', values = RColorBrewer::brewer.pal(9, 'Purples')[c(3,5,7,9)]) +
-                              scale_y_continuous("Daily incidence", limits = c(0,100)) +
+                              scale_colour_manual('NPI effectiveness', values = RColorBrewer::brewer.pal(9, 'Purples')[c(3,5,7,9)]) +
+                              scale_y_continuous("Daily incidence", limits = c(0, 150)) +
                               scale_x_date('Date', date_breaks = '1 month', date_labels = '%d %b') +
                               facet_wrap(~r, ncol = 3) 
 
@@ -235,34 +235,34 @@ nextDecision <- as.numeric(as.Date(dateL) - as.Date(DAY1))
 
 # Slightly more nuanced interventions: 5 scenarios
 
-intC40a <- data.frame(time = 1:xLen,  reduce = c(rep(1, dayC), rep(0.60, 7), rep(0.37, nextDecision - dayC - 7), rep(1, xLen - nextDecision)))
-intT40a <- data.frame(time = 1:xLen,  reduce = c(rep(1, dayT), rep(0.60, 7), rep(0.37, nextDecision - dayT - 7), rep(0.37, xLen - nextDecision)))
+intC50a <- data.frame(time = 1:xLen,  reduce = c(rep(1, dayC), rep(0.50, 7), rep(0.50, nextDecision - dayC - 7), rep(1, xLen - nextDecision)))
+intT50a <- data.frame(time = 1:xLen,  reduce = c(rep(1, dayT), rep(0.50, 7), rep(0.50, nextDecision - dayT - 7), rep(0.50, xLen - nextDecision)))
 
-intC40b <- data.frame(time = 1:xLen,  reduce = c(rep(1, dayC), rep(0.60, 7), rep(0.37, nextDecision - dayC - 7), rep(0.7, xLen - nextDecision)))
-intT40b <- data.frame(time = 1:xLen,  reduce = c(rep(1, dayT), rep(0.60, 7), rep(0.37, nextDecision - dayT - 7), rep(0.20, xLen - nextDecision)))
+intC50b <- data.frame(time = 1:xLen,  reduce = c(rep(1, dayC), rep(0.50, 7), rep(0.50, nextDecision - dayC - 7), rep(0.7, xLen - nextDecision)))
+intT50b <- data.frame(time = 1:xLen,  reduce = c(rep(1, dayT), rep(0.50, 7), rep(0.50, nextDecision - dayT - 7), rep(0.20, xLen - nextDecision)))
 
-intC40c <- data.frame(time = 1:xLen,  reduce = c(rep(1, dayC), rep(0.60, 7), rep(0.37, nextDecision - dayC - 7), rep(0.37, xLen - nextDecision)))
-intT40c <- data.frame(time = 1:xLen,  reduce = c(rep(1, dayT), rep(0.60, 7), rep(0.37, nextDecision - dayT - 7), rep(0.37, xLen - nextDecision)))
+intC50c <- data.frame(time = 1:xLen,  reduce = c(rep(1, dayC), rep(0.50, 7), rep(0.50, nextDecision - dayC - 7), rep(0.50, xLen - nextDecision)))
+intT50c <- data.frame(time = 1:xLen,  reduce = c(rep(1, dayT), rep(0.50, 7), rep(0.50, nextDecision - dayT - 7), rep(0.50, xLen - nextDecision)))
 
-intC40d <- data.frame(time = 1:xLen,  reduce = c(rep(1, dayC), rep(0.60, 7), rep(0.37, nextDecision - dayC - 7), rep(0.20, xLen - nextDecision)))
-intT40d <- data.frame(time = 1:xLen,  reduce = c(rep(1, dayT), rep(0.60, 7), rep(0.37, nextDecision - dayT - 7), rep(0.37, xLen - nextDecision)))
+intC50d <- data.frame(time = 1:xLen,  reduce = c(rep(1, dayC), rep(0.50, 7), rep(0.50, nextDecision - dayC - 7), rep(0.20, xLen - nextDecision)))
+intT50d <- data.frame(time = 1:xLen,  reduce = c(rep(1, dayT), rep(0.50, 7), rep(0.50, nextDecision - dayT - 7), rep(0.50, xLen - nextDecision)))
 
-intC40e <- data.frame(time = 1:xLen,  reduce = c(rep(1, dayC), rep(0.60, 7), rep(0.37, nextDecision - dayC - 7), rep(0.20, xLen - nextDecision)))
-intT40e <- data.frame(time = 1:xLen,  reduce = c(rep(1, dayT), rep(0.60, 7), rep(0.37, nextDecision - dayT - 7), rep(0.20, xLen - nextDecision)))
+intC50e <- data.frame(time = 1:xLen,  reduce = c(rep(1, dayC), rep(0.50, 7), rep(0.50, nextDecision - dayC - 7), rep(0.20, xLen - nextDecision)))
+intT50e <- data.frame(time = 1:xLen,  reduce = c(rep(1, dayT), rep(0.50, 7), rep(0.50, nextDecision - dayT - 7), rep(0.20, xLen - nextDecision)))
 
 # Compile as a dataframe
-dfInterventions <- rbind(intC40a, intC40b, intC40c, intC40d, intC40e,
-                         intT40a, intT40b, intT40c, intT40d, intT40e) %>% 
+dfInterventions <- rbind(intC50a, intC50b, intC50c, intC50d, intC50e,
+                         intT50a, intT50b, intT50c, intT50d, intT50e) %>% 
                     mutate(
                         date = as.Date(DAY1) + time - 1,
                         type = c(rep('Social contact', xLen*5), rep('Transmission probability', xLen*5)),
                         scenario = factor(rep(rep(1:5, each = xLen), 2), 
                                           levels = 1:5, 
-                                          labels = c('Lift restrictions', 
-                                                     'Relax restrictions & improve contact tracing', 
+                                          labels = c('Lift restrictions  on social contacts', 
+                                                     'Relax restrictions on social contacts\nbut limit transmission probability', 
                                                      'Continue at current level', 
-                                                     'Tighten restrictions',
-                                                     'Tighten restrictions & improve contact tracing'))
+                                                     'Tighten restrictions on social contacts',
+                                                     'Tighten restrictions  on social contacts\nand limit transmission probability'))
                     )
 
 # Illustrate the interventions
@@ -273,61 +273,61 @@ interventionsFig <- dfInterventions %>%
                             facet_wrap(~type, nrow = 2) +
                             scale_colour_manual(NULL, values = RColorBrewer::brewer.pal(5, 'Set1')) +
                             scale_fill_manual(NULL, values = RColorBrewer::brewer.pal(5, 'Set1')) +
-                            scale_y_continuous("Magnitude of intercention (as % of pre-covid levels)", labels = scales::percent, limits = c(0,1), breaks = seq(0,1,.2)) +
+                            scale_y_continuous("NPI effectiveness", labels = scales::percent, limits = c(0,1), breaks = seq(0,1,.2)) +
                             scale_x_date('Date', date_breaks = '1 month', date_labels = '%d %b') +
                             theme(legend.position = 'bottom') +
                             guides(color = guide_legend(nrow = 3)) 
 
 # Have to define as appropriate class to work for COVOID
-class(intT40a) <- class(intC40a) <- class(intT40b) <- class(intC40b) <- class(intT40c) <- class(intC40c) <- 
-class(intT40d) <- class(intC40d) <- class(intT40e) <- class(intC40e) <- c("data.frame", "intervention")
+class(intC50a) <- class(intC50b) <- class(intC50c) <- class(intC50d) <- class(intC50e) <- 
+class(intT50a) <- class(intT50b) <- class(intT50c) <- class(intT50d) <- class(intT50e) <- c("data.frame", "intervention")
 
 
-# Define COVOID params based onthese interventions (Note R0 = 8)
-param340a <- seir_c_param(R0 = 8.0,
+# Define COVOID params based on these interventions (Note R0 = 8)
+param850a <- seir_c_param(R0 = 8.0,
                         gamma = 1/4, 
                         sigma=1/7, 
                         cm=cm_oz,
                         dist=dist_oz,
-                        transmission_intervention = intT40a,
-                        contact_intervention = intC40a)
+                        transmission_intervention = intT50a,
+                        contact_intervention = intC50a)
 
-param340b <- seir_c_param(R0 = 8.0,
+param850b <- seir_c_param(R0 = 8.0,
                           gamma = 1/4, 
                           sigma=1/7, 
                           cm=cm_oz,
                           dist=dist_oz,
-                          transmission_intervention = intT40b,
-                          contact_intervention = intC40b)
+                          transmission_intervention = intT50b,
+                          contact_intervention = intC50b)
 
-param340c <- seir_c_param(R0 = 8.0,
+param850c <- seir_c_param(R0 = 8.0,
                           gamma = 1/4, 
                           sigma=1/7, 
                           cm=cm_oz,
                           dist=dist_oz,
-                          transmission_intervention = intT40c,
-                          contact_intervention = intC40c)
+                          transmission_intervention = intT50c,
+                          contact_intervention = intC50c)
 
-param340d <- seir_c_param(R0 = 8.0,
+param850d <- seir_c_param(R0 = 8.0,
                           gamma = 1/4, 
                           sigma=1/7, 
                           cm=cm_oz,
                           dist=dist_oz,
-                          transmission_intervention = intT40d,
-                          contact_intervention = intC40d)
+                          transmission_intervention = intT50d,
+                          contact_intervention = intC50d)
 
-param340e <- seir_c_param(R0 = 8.0,
+param850e <- seir_c_param(R0 = 8.0,
                           gamma = 1/4, 
                           sigma=1/7, 
                           cm=cm_oz,
                           dist=dist_oz,
-                          transmission_intervention = intT40e,
-                          contact_intervention = intC40e)
+                          transmission_intervention = intT50e,
+                          contact_intervention = intC50e)
 
 
 # Set up list structure to store estimates
 simulation_results2 <- vector(mode="list",length=5)
-names(simulation_results2) <- paste0(rep('param340', 5), letters[1:5])
+names(simulation_results2) <- paste0(rep('param850', 5), letters[1:5])
 
 
 # Loop through 5 scenarios, fit SEIR models and store results
@@ -339,16 +339,16 @@ for(i in 1:length(simulation_results2)){
 }
 
 
-# Compile the results as a dtaframe
+# Compile the results as a dataframe
 dfModel2 <- purrr::map_df(simulation_results2, ~tibble(date = .$epi$t + as.Date(DAY1) - 1,
                                                      predInc = .$epi$incidence),
                          .id = "source") %>% 
     mutate(scenario = factor(rep(1:5, each = xLen), levels = 1:5, 
-                             labels = c('Lift restrictions', 
-                                        'Relax restrictions & improve contact tracing', 
-                                        'Continue at current level', 
-                                        'Tighten restrictions',
-                                        'Tighten restrictions & improve contact tracing'))
+                                          labels = c('Lift restrictions on social contacts', 
+                                                     'Relax restrictions on social contacts\nbut limit transmission probability', 
+                                                     'Continue at current level', 
+                                                     'Tighten restrictions on social contacts',
+                                                     'Tighten restrictions on social contacts\nand limit transmission probability'))
         )
 
 # Visualise the projections
@@ -364,89 +364,266 @@ projectionsFig <- pBase +
               guides(color = guide_legend(nrow = 3)) 
 
 
+
+############################
+### Sensitivity analysis ###
+############################
+
+# Slightly more nuanced interventions: 5 scenarios
+
+intC30a <- data.frame(time = 1:xLen,  reduce = c(rep(1, dayC), rep(0.70, 7), rep(0.70, nextDecision - dayC - 7), rep(1, xLen - nextDecision)))
+intT30a <- data.frame(time = 1:xLen,  reduce = c(rep(1, dayT), rep(0.70, 7), rep(0.70, nextDecision - dayT - 7), rep(0.70, xLen - nextDecision)))
+
+intC30b <- data.frame(time = 1:xLen,  reduce = c(rep(1, dayC), rep(0.70, 7), rep(0.70, nextDecision - dayC - 7), rep(0.90, xLen - nextDecision)))
+intT30b <- data.frame(time = 1:xLen,  reduce = c(rep(1, dayT), rep(0.70, 7), rep(0.70, nextDecision - dayT - 7), rep(0.30, xLen - nextDecision)))
+
+intC30c <- data.frame(time = 1:xLen,  reduce = c(rep(1, dayC), rep(0.70, 7), rep(0.70, nextDecision - dayC - 7), rep(0.70, xLen - nextDecision)))
+intT30c <- data.frame(time = 1:xLen,  reduce = c(rep(1, dayT), rep(0.70, 7), rep(0.70, nextDecision - dayT - 7), rep(0.70, xLen - nextDecision)))
+
+intC30d <- data.frame(time = 1:xLen,  reduce = c(rep(1, dayC), rep(0.70, 7), rep(0.70, nextDecision - dayC - 7), rep(0.30, xLen - nextDecision)))
+intT30d <- data.frame(time = 1:xLen,  reduce = c(rep(1, dayT), rep(0.70, 7), rep(0.70, nextDecision - dayT - 7), rep(0.70, xLen - nextDecision)))
+
+intC30e <- data.frame(time = 1:xLen,  reduce = c(rep(1, dayC), rep(0.70, 7), rep(0.70, nextDecision - dayC - 7), rep(0.30, xLen - nextDecision)))
+intT30e <- data.frame(time = 1:xLen,  reduce = c(rep(1, dayT), rep(0.70, 7), rep(0.70, nextDecision - dayT - 7), rep(0.30, xLen - nextDecision)))
+
+# Compile as a dataframe
+dfInterventions2 <- rbind(intC30a, intC30b, intC30c, intC30d, intC30e,
+                         intT30a, intT30b, intT30c, intT30d, intT30e) %>% 
+    mutate(
+        date = as.Date(DAY1) + time - 1,
+        type = c(rep('Social contact', xLen*5), rep('Transmission probability', xLen*5)),
+        scenario = factor(rep(rep(1:5, each = xLen), 2), 
+                          levels = 1:5, 
+                          labels = c('Lift restrictions on social contacts', 
+                                     'Relax restrictions on social contacts\nbut limit transmission probability', 
+                                     'Continue at current level', 
+                                     'Tighten restrictions on social contacts',
+                                     'Tighten restrictions on social contacts\nand limit transmission probability'))
+    )
+
+# Illustrate the interventions
+interventionsFig2 <- dfInterventions2 %>% 
+    ggplot(aes(x = date, y = reduce, group = scenario, color = scenario, fill = scenario)) + 
+    geom_line(size = 1.4) + 
+    geom_ribbon(aes(x = date, ymax = reduce, ymin = 0), alpha = 0.2) +
+    facet_wrap(~type, nrow = 2) +
+    scale_colour_manual(NULL, values = RColorBrewer::brewer.pal(5, 'Set1')) +
+    scale_fill_manual(NULL, values = RColorBrewer::brewer.pal(5, 'Set1')) +
+    scale_y_continuous("NPI effectiveness", labels = scales::percent, limits = c(0,1), breaks = seq(0,1,.2)) +
+    scale_x_date('Date', date_breaks = '1 month', date_labels = '%d %b') +
+    theme(legend.position = 'bottom') +
+    guides(color = guide_legend(nrow = 3)) 
+
+# Have to define as appropriate class to work for COVOID
+class(intC30a) <- class(intC30b) <- class(intC30c) <- class(intC30d) <- class(intC30e) <- 
+    class(intT30a) <- class(intT30b) <- class(intT30c) <- class(intT30d) <- class(intT30e) <- c("data.frame", "intervention")
+
+
+# Define COVOID params based on these interventions (Note R0 = 8)
+param630a <- seir_c_param(R0 = 6.0,
+                          gamma = 1/4, 
+                          sigma=1/7, 
+                          cm=cm_oz,
+                          dist=dist_oz,
+                          transmission_intervention = intT30a,
+                          contact_intervention = intC30a)
+
+param630b <- seir_c_param(R0 = 6.0,
+                          gamma = 1/4, 
+                          sigma=1/7, 
+                          cm=cm_oz,
+                          dist=dist_oz,
+                          transmission_intervention = intT30b,
+                          contact_intervention = intC30b)
+
+param630c <- seir_c_param(R0 = 6.0,
+                          gamma = 1/4, 
+                          sigma=1/7, 
+                          cm=cm_oz,
+                          dist=dist_oz,
+                          transmission_intervention = intT30c,
+                          contact_intervention = intC30c)
+
+param630d <- seir_c_param(R0 = 6.0,
+                          gamma = 1/4, 
+                          sigma=1/7, 
+                          cm=cm_oz,
+                          dist=dist_oz,
+                          transmission_intervention = intT30d,
+                          contact_intervention = intC30d)
+
+param630e <- seir_c_param(R0 = 6.0,
+                          gamma = 1/4, 
+                          sigma=1/7, 
+                          cm=cm_oz,
+                          dist=dist_oz,
+                          transmission_intervention = intT30e,
+                          contact_intervention = intC30e)
+
+
+# Set up list structure to store estimates
+simulation_results3 <- vector(mode="list",length=5)
+names(simulation_results3) <- paste0(rep('param630', 5), letters[1:5])
+
+
+# Loop through 5 scenarios, fit SEIR models and store results
+for(i in 1:length(simulation_results3)){
+    
+    id <- names(simulation_results3)[i]
+    simulation_results3[[id]] <- simulate_seir_c(t = xLen, state_t0 = state0, param = eval(parse(text=id)))
+    
+}
+
+
+# Compile the results as a dataframe
+dfModel3 <- purrr::map_df(simulation_results3, ~tibble(date = .$epi$t + as.Date(DAY1) - 1,
+                                                       predInc = .$epi$incidence),
+                          .id = "source") %>% 
+    mutate(scenario = factor(rep(1:5, each = xLen), levels = 1:5, 
+                             labels = c('Lift restrictions on social contacts', 
+                                        'Relax restrictions on social contacts\nbut limit transmission probability', 
+                                        'Continue at current level', 
+                                        'Tighten restrictions on social contacts',
+                                        'Tighten restrictions on social contacts\nand limit transmission probability'))
+    )
+
+# Visualise the projections
+sensitivityFig <- pBase +
+    geom_line(data = dfModel3, 
+              aes(x = date, y = predInc, color = scenario), size = 1) +
+    annotate('text', x = as.Date('2021-07-09'), y = 200, label = 'Fri 16 July', color = 'grey60') +
+    geom_vline(aes(xintercept = as.Date(dateL)), color = 'grey60', size = 1.4) + 
+    scale_colour_manual(NULL, values = RColorBrewer::brewer.pal(5, 'Set1')) +
+    scale_y_continuous("Daily incidence", limits = c(0,200)) +
+    scale_x_date('Date', date_breaks = '1 month', date_labels = '%d %b') +
+    theme(legend.position = 'bottom') +
+    guides(color = guide_legend(nrow = 3)) 
+
+
 ```
 
-# Overview
+# Aim
 
-* This is a rough outline of a potential analysis to inform pathways out of the current COVID19 Delta-variant outbreak in Sydney. 
-* The figure shows cases related to the outbreak since June 1. Infections brought from overseas or interstate are excluded. 
-* The red line shows the seven-day rolling average (centered). 
+The aims of this in-brief analysis are to
 
-```{r baseFig, fig.cap='The "Bondi Cluster" COVID19 Delta variant outbreak (Sydney, June-July 2021)', fig.height=6.5, fig.width=6.5, fig.align='center'}
+(i) Model observed cases from the current COVID-19 Delta-variant outbreak in Sydney, New South Wales (NSW) using a SEIR epidemic model incorporating dynamic non-pharmaceutical interventions (NPIs).
+
+(ii) Project the course of the epidemic over the next six weeks under different assumptions regarding ongoing NPIs. 
+
+# Methods 
+
+## Observed data 
+
+Daily incidence data on the current Delta-variant outbreak in New South Wales are taken from [https://www.covid19data.com.au/nsw](covid19data.com.au). We exclude cases that were acquired overseas or from interstate travel and include cases with a known or unknown local source as well as those under investigation.
+```{r baseFig, fig.cap='COVID-19 local transmitted cases (New South Wales, June-July 2021)', fig.height=3.5, fig.width=6.5, fig.align='center'}
 
 baseFig
 
 ```
 
+## Model 
+
+We model the outbreak using an age-structured deterministic Susceptible-Exposed-Infected-Recovered (SEIR) model that accounts for dynamic non-pharmaceutical interventions (NPIs). This extended SEIR model has been implemented in our `COVOID` R package, described in detail at [cbdrh.github.io/covoidance](https://cbdrh.github.io/covoidance/). In brief, this model can incorporate two types of NPIs into a standard SEIR epidemic model:
+
+(i) interventions that target the average number of daily contacts between individuals from different age groups, which emulates restrictions on social activity such as stay-at home orders.
+
+(ii) interventions that target the probability of transmission, emulating mask wearing, hand washing, contact tracing and case isolation. 
+
+### Demographics
+We assumed a population of 4 million unvaccinated individuals with an age distribution reflecting that of the broader Australian population. Given the relatively low proportion of fully vaccinated individuals to date, and the relatively short time frame in question, the potential role of vaccination to mitigate the current outbreak is negligible. To be conservative, we model a population around 80% the size of Sydney assuming the remaining  approximately 20% are fully protected. 
+
+### Disease parameters
+We set the average duration of the incubation period to 4 days and the average duration of the infectious period to 7 days. Our calibration exercise below explored three values of R~0~: 6.0, 7.0 and 8.0. Note that R~0~ is the _base reproduction rate_, absent of any intervention or immunity. This should be distinguished from R~t~ (also known as R~eff~) which is the time-variant reproduction rate (or effective reproduction rate), which takes into account the effect of public health interventions and population immunity (either natural or due to vaccination).
+
+### Timeline of the outbreak
+We assume the following key dates in the timeline of the current outbreak:
+
+**June 1** A hypothetical case zero of the current outbreak, an individual aged 25-30, is first exposed; 
+
+**June 16** A man in his 60s working as a driver transporting international flight crew [tests positive for COVID-19](https://www.health.nsw.gov.au/news/Pages/20210616_01.aspx), prompting urgent contact tracing and isolation of close contacts; 
+
+**June 25** Lockdowns are introduced to four Sydney Local Government Areas, soon after extended to the greater Sydney region; 
+
+**July 16** Date at which current lockdown ends, pending further decisions. 
+
+### Code
+
+The R code to replicate this analysis is available on [GitHub](https://github.com/CBDRH/BondiClusterRescue). 
 
 # Calibration
 
-We can try to calibrate an SEIR model to the observed data, taking in to account the following assumptions
-* Case 0 was a flight attendant aged 30-35 who was exposed on June 1. 
-* The limousine driver was identified as a case on June 16, prompting extensive contact tracing efforts. 
-* A lockdown was introduced from June 25.
-* Latent period = 4 days
-* Infectious period  = 7 days
-* R0 = 6, 7 or 8
-* Intervention strength varies from a 20% reduction to a 50% reduction of pre-pandemic levels
-
-```{r calibrationFig, fig.cap='Calibrating the SEIR model to the Bondi Cluster', fig.height=6.5, fig.width=6.5, fig.align='center'}
+The Delta-variant R~0~ and the effectiveness of NPIs combine to give an effective reproduction rate R~eff~. Because the true value of the R~0~ and NPI effectiveness are unknown, we undertake a calibration exercise to find combinations of these parameters which fit the observed cases. Based on the timeline above, we used the `COVOID` SEIR model to estimate the epidemic curve across a range of values for R~0~ (4.0, 6.0, 8.0) and NPI effectiveness (30% to 70% reduction in contacts and/or transmission probability). The results of this calibration exercise are presented below.
+```{r calibrationFig, fig.cap='Calibrating the SEIR model to locally transmitted cases in NSW since June 1', fig.height=4.0, fig.width=6.5, fig.align='center'}
 
 calibrationFig
 
 ```
 
-Several combinations of R0 and intervention strength provide a reasonable fit to the data. To proceed, I will choose R0 = 8.0 and intervention strength = 40%. But I will tighten the intervention strength after the first week to improve the fit further. This seems reasonable as it took some time for people to start adhering strictly to the lockdown orders. 
+_The points shows locally-transmitted cases of COVID-19 in NSW since June 1 2021. The red line shows the seven-day rolling average for the previous seven days. Infections acquired overseas or interstate are excluded. _
+
+Several combinations of R~0~ and NPI effectiveness provide a reasonable fit to the data. For our main analysis we choose values of R~0~ = 8.0 and NPI effectiveness = 50%. We also undertook an sensitivity analysis using the values of R~0~ = 6.0 and NPI effectiveness = 30%.
+
+This range of estimates of R~0~ is consistent with the [range of 5 to 8 estimated for the Delta variant by modellers at Imperial College London](https://www.bbc.com/news/health-57431420).
 
 
 # Intervention scenarios
 
-Choosing this calibration, I now explore a series of interventions. Each intervention assumes that the current level of restrictions remains in place until Friday 16 July. Thereafter, the following scenarios are introduced:
+Our analysis assumes that the current level of restrictions remains in place until Friday 16 July. Thereafter, we projected the model under the following five scenarios.
 
-1. Lift restrictions (contact tracing continues as normal)
-2. Relax restrictions but improve contact tracing
-3. Continue at current level
-4. Tighten restrictions (contact tracing continues as normal)
-5. Tighten restrictions and improve contact tracing
+1. Lift all restrictions on social contacts, with restrictions targeting transmission probability (mask wearing etc) remaining as they are.
+2. Relax restrictions on social contacts but tighten restrictions targeting transmission probability
+3. Continue with restrictions at the current level
+4. Tighten restrictions on social contacts, with restrictions targeting transmission probability remaining as they are.
+5. Tighten restrictions on social contacts and also tighten restrictions targeting transmission probability.
 
-
-```{r interventionsFig, fig.cap='Potential interventions from July 16', fig.height=6.5, fig.width=6.5, fig.align='center'}
+These five scenarios are summarised below.
+```{r interventionsFig, fig.cap='Five scenarios for NPI effectiveness from a baseline of 50% reduction', fig.height=4.0, fig.width=6.5, fig.align='center'}
 
 interventionsFig
 
 ```
 
-# Projections
+Note that we assume the restrictions remain in place until September 1. 
 
-The figure below shows the projected incidence based on R0 = 8.0 with intervention settings as described above
+# Model results
 
-```{r projectionsFig, fig.cap='Projected COVID19 incidence in Sydeny (17 July - 31 August 2021)', fig.height=6.5, fig.width=6.5, fig.align='center'}
+The figure below shows the projected incidence based on R~0~ = 8.0 with intervention settings as described above
+```{r projectionsFig, fig.cap='Observed and projected COVID-19 incidence in NSW (1 June - 1 September 2021)', fig.height=4.0, fig.width=6.5, fig.align='center', out.width="80%"}
 
 projectionsFig
 
 ```
+_R~0~ = 8.0 and baseline NPI effectiveness = 50%_
 
-* Completely lifting restrictions would result in an epidemic rise in cases.
-* Continuing as we are or relaxing restrictions with improved contact tracing will not get the outbreak under control. 
-* Tighter restrictions and ideally more effective contact tracing (or other efforts to minimise the probability of spread) are needed to reduce infections over the next six weeks.
+The results suggest that completely lifting restrictions on social contact (that is, ending the "lockdown") would result in an epidemic rise in cases. Continuing with social contact restrictions at the level they were at in early July is unlikely to be sufficient to get the outbreak under control. To reduce daily incidence to a manageable level before September will require a lockdown throughout August where the net effect of all restrictions is stronger than the level observed in early July (that is, currrently).
+
+
+# Sensitivity analysis 
+
+In order to test the robustness of our conclusions to our heuristic choice of R~0~ and NPI effectiveness, we repeat the analysis using the alternative specification of R~0~ = 6.0 and NPI effectiveness = 30%. We specify a similar set of five future intervention scenarios starting from the baseline of 30%.
+
+```{r interventionsFig2, fig.cap='Sensitivity analysis: Five scenarios for NPI effectiveness from a baseline of 30% reduction', fig.height=4.0, fig.width=6.5, fig.align='center'}
+
+interventionsFig2
+
+```
+
+The figure below presents the projected case incidence based on this parameterisation. 
+
+```{r sensitivityFig, fig.cap='Sensitivity analysis: Observed and projected COVID-19 incidence in NSW (1 June - 1 September 2021)', fig.height=4.0, fig.width=6.5, fig.align='center', out.width="80%"}
+
+sensitivityFig
+
+```
+
+_R~0~ = 6.0 and baseline NPI effectiveness = 30%_
+
+Under this model parameterisation, the main conclusion remains consistent: suppressing the current outbreak will require a lockdown throughout August where the net effect of all interventions exceeds the levels in early July.
 
 # Limitations
 
-There are many unknown parameters in the model, which make it easy to fit the model to observed cases, but increases the risk of over-fitting. 
+There is a large degree of uncertainty around the parameter specification for the SEIR model. This large parameter space makes it easy to fit the model to observed cases, but risks over-fitting which could result in low external validity. This limitation is somewhat assuaged by the observation that our main conclusion was robust to different specifications of R~0~ and NPI effectiveness. 
 
 # Conclusion
 
-In order to stop the current COVID19 Delta-variant outbreak in Sydney it will be necessary to invest resources in contact tracing and other methods that will further diminish the probability of transmission as well as tightening social restrictions beyond the levels observed in early to mid July. 
-
-Given the current trajectory, continuing with restrictions at the level observed in early to mid July is unlikely to get the outbreak under control.
-
-Lifting the restrictions on social contacts will likely to lead to an exponential rise in infections, and necessitate a longer and more restrictive lockdown within a matter of weeks. 
-
-
-
-
-
-
-
-
-
+Suppressing the current COVID-19 Delta-variant outbreak in Sydney will require restrictions to remain in place throughout August at a level such that the net effect of all restrictions exceeds that observed in early July. Given the current trajectory, continuing with restrictions at the level observed in late June - early July is unlikely to get the outbreak under control. Lifting the restrictions on social contacts will likely to lead to an exponential rise in infections, and necessitate a longer and more restrictive lockdown within a matter of weeks.
